@@ -7,13 +7,15 @@ import requests
 import lxml
 import time
 import os
-from scrapy.selector import Selector
+
 url='http://www.meizitu.com' #需要设置首页地址
 page_num = 10 #所要爬取的页数
 
 page_url=[]
 for i in range(1,page_num+1):
     page_url.append(url  + '/a/list_1_%d.html'% (i))
+print('运行时间较慢，请稍等...')
+print('图片将保存在D://all中')
 
 my_headers = [
     "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36",
@@ -43,7 +45,8 @@ for index_list in page_url:   #每一页
     src_url = html.xpath('//*[@id="maincontent"]/div/ul/li/div/div/a/@href')
    
     for index_src in src_url:   #每一个缩略图
-        print(index_src)
+        print('============')
+        starttime = time.time()
         res =  url_open(index_src)
         imghtml = lxml.etree.HTML(res)
         src_data = imghtml.xpath('//*[@id="picture"]/p/img/@src')  #详情页的图片地址
@@ -62,17 +65,19 @@ for index_list in page_url:   #每一页
                 if os.path.isfile(img_path):
                     print('{} 中的 {} 已经存在!'.format(dir_name,pic_name))
                 else:
-                    
                     try:
                         img_data = requests.get(index_img)
                         face = BaiduPicIndentify(img_data.content)
                         face.detect_face()
+                        print('---------------------------------------------')
                         face.faceout()
+                        print('---------------------------------------------')
                         with open(img_path, 'wb')as f:
                             f.write(img_data.content)
                             print("正在保存{}中的 {}".format(dir_name, pic_name))
                             f.close()
                     except OSError:
                         continue
-               
+        endtime=time.time()
+        print('该套图用时 {} S'.format(round(endtime-starttime)))
 #print(response)
