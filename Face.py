@@ -1,4 +1,4 @@
-# coding:utf-8
+﻿# coding:utf-8
 import urllib.request
 import re
 from bs4 import BeautifulSoup
@@ -214,7 +214,6 @@ if __name__ == '__main__':
     else:
         for i in range(1, download_page):
             mul_url.append(get_url(i))
-        print(mul_url)
         for i in range(0, download_page):
             with ThreadPool(download_speed) as pool:
                 pool.map(downloadUmei, mul_url[i])
