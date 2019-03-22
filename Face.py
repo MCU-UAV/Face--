@@ -6,6 +6,7 @@ import random
 import requests
 import lxml
 import os
+from tqdm import tqdm
 from multiprocessing.dummy import Pool as ThreadPool
 import time
 
@@ -160,7 +161,7 @@ def get_usr_define():
     usr_name = ['【普通会员】', '【黄金会员】', '【白金会员】', '【超级会员】', '【**可爱】']
 
     img_org_list = [False, True, True, True, True]
-    download_speed_list = [1, 1, 5, 5, 5]
+    download_speed_list = [1, 1, 10, 10, 10]
     download_page_list = [2, 2, 40, 40, 40]
     print('=======================================================')
     print('=                     人工智障爬虫                    =')
@@ -183,9 +184,9 @@ def get_usr_define():
         time.sleep(1)
 
     else:
-        print('{}{}：图片将保存在{},请尽情欣赏！'.format(usr_call[usr_id], usr_name[usr_id], dir_path))
+        print('!: {}{}：图片将保存在{},请尽情欣赏！'.format(usr_call[usr_id], usr_name[usr_id], dir_path))
         if usr_id > 1:
-            print('为您开启急速下载中...')
+            print('!: 为您开启急速下载中...')
         else:
             pass
         time.sleep(2)
@@ -201,15 +202,19 @@ if __name__ == '__main__':
         os.makedirs(dir_path)
     else:
         pass
+    mul_url = []
     img_org, download_speed, download_page = get_usr_define()  # 获得用户权限
+    print('!: 初始化页面资源中...')
     if (img_org == True):
+        for i in tqdm(range(1, download_page),ascii=True):
+            mul_url.append(get_page(i))
         for i in range(1, download_page):
-            mul_url = get_page(i)
             with ThreadPool(download_speed) as pool:
-                pool.map(downloadMzitu, mul_url)
+                pool.map(downloadMzitu, mul_url[i])
     else:
+        for i in tqdm(range(1, download_page),ascii=True):
+            mul_url.append(get_url(i))
         for i in range(1, download_page):
-            mul_url = get_url(i)
             with ThreadPool(download_speed) as pool:
-                pool.map(downloadUmei, mul_url)
+                pool.map(downloadUmei, mul_url[i])
     print('恭喜！所有页面均已爬完~')
