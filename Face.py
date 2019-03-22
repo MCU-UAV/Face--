@@ -6,7 +6,7 @@ import random
 import requests
 import lxml
 import os
-from tqdm import tqdm
+#from tqdm import tqdm
 from multiprocessing.dummy import Pool as ThreadPool
 import time
 
@@ -206,15 +206,16 @@ if __name__ == '__main__':
     img_org, download_speed, download_page = get_usr_define()  # 获得用户权限
     print('!: 初始化页面资源中...')
     if (img_org == True):
-        for i in tqdm(range(1, download_page),ascii=True):
-            mul_url.append(get_page(i))
         for i in range(1, download_page):
+            mul_url.append(get_page(i))
+        for i in range(0, download_page):
             with ThreadPool(download_speed) as pool:
                 pool.map(downloadMzitu, mul_url[i])
     else:
-        for i in tqdm(range(1, download_page),ascii=True):
-            mul_url.append(get_url(i))
         for i in range(1, download_page):
+            mul_url.append(get_url(i))
+        print(mul_url)
+        for i in range(0, download_page):
             with ThreadPool(download_speed) as pool:
                 pool.map(downloadUmei, mul_url[i])
     print('恭喜！所有页面均已爬完~')
