@@ -205,14 +205,23 @@ if __name__ == '__main__':
     mul_url = []
     img_org, download_speed, download_page = get_usr_define()  # 获得用户权限
     print('!: 初始化页面资源中...')
+    lastPro = 0
     if (img_org == True):
         for i in range(1, download_page):
+            print('!: 已加载 {}%   '.format(round(i/download_page*100)),end='')
+            for i in range(0, round(i / download_page * 20)):
+                print('■', end='')
+            print('', end='\r')
             mul_url.append(get_page(i))
         for i in range(0, download_page):
             with ThreadPool(download_speed) as pool:
                 pool.map(downloadMzitu, mul_url[i])
     else:
         for i in range(1, download_page):
+            print('!: 已加载 {}%   '.format(round(i / download_page * 100)), end='')
+            for i in range(0, round(i / download_page * 20)):
+                print('■', end='')
+            print('', end='\r')
             mul_url.append(get_url(i))
         for i in range(0, download_page):
             with ThreadPool(download_speed) as pool:
