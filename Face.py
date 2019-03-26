@@ -7,6 +7,7 @@ import requests
 import lxml
 import os
 import ctypes,sys
+import base64
 from multiprocessing.dummy import Pool as ThreadPool
 import time
 
@@ -101,9 +102,9 @@ def downloadUmei(suolue_index):
                 print('*: 图集【{}】共{}张图片，已保存{}张，新保存{}张 ,失败{}张'.format(src_name[0], img_num, img_num - img_fail_num,
                                                                 img_num - img_fail_num - img_already_save_num,
                                                                 img_fail_num))
-                save_already_download('umeiList.bin',suolue_index+'\n')
+                save_already_download(dir_path[0]+download_Log[0],suolue_index)
             except Exception as e:
-                print(e)
+                print('!: E: {}'.format(e))
             break
         elif (res == '<urlopen error timed out>'):  # 超时
             color_print('!: 连接超时已跳过该图集',FOREGROUND_RED)
@@ -115,7 +116,7 @@ def downloadUmei(suolue_index):
 
             if (len(src_data) != 1):  # 失败图片
                 if (fail_times < 5):  # 如果尝试次数小于5次
-                    color_print('!: 图片 {} 下载失败 (未获取到地址),尝试第 {} 次'.format(img_num, fail_times + 1),FOREGROUND_RED)
+                    color_print('!: 图片 {} 下载失败 (未获取到地址),尝试第 {} 次'.format(img_num, fail_times + 1),FOREGROUND_YELLOW)
                     fail_times = fail_times + 1
                     continue
                 else:
@@ -123,10 +124,10 @@ def downloadUmei(suolue_index):
                     color_print('!: 图片 {} 下载失败 (未获取到地址)'.format(img_num),FOREGROUND_RED)
             else:
                 pic_name = src_name[0] + '_' + str(img_num)  # 使用缩略图序号+页面号命名
-                img_path = dir_path + str(src_name[0]) + '_' + pic_name + '.jpg'
+                img_path = dir_path[img_org] + src_name[0] + '_' + pic_name + '.jpg'
                 if os.path.isfile(img_path):
                     img_already_save_num = img_already_save_num + 1
-                    color_print('*: 图片 {} 已经存在，已跳过'.format(pic_name),FOREGROUND_RED)
+                    color_print('*: 图片 {} 已经存在，已跳过'.format(pic_name),FOREGROUND_YELLOW)
                 else:
                     try:  # 尝试下载
                         img_data = requests.get(src_data[0], timeout=10)  # 下载图片
@@ -153,25 +154,26 @@ def downloadMzitu(url):
     n = 1
     for i in range(int(total)):
         # 每一页
-        try:
-            link = '{}/{}'.format(url, i + 1)
-            s = lxml.etree.HTML(requests.get(link).content)
-            jpgLink = s.xpath('//div[@class="main-image"]/p/a/img/@src')[0]
-            filename = title + '_' + str(n) + '.jpg'
-            file_path = dir_path +  filename
-            if os.path.isfile(file_path):
-                color_print('*: 图片 {} 已经存在，已跳过'.format(filename),FOREGROUND_RED)
-            else:
-                color_print('*: 图片 {}_{} 保存成功' .format(title, n),FOREGROUND_GREEN)
-                with open(file_path, "wb+") as jpg:
-                    jpg.write(requests.get(jpgLink, headers=header(jpgLink)).content)
-            n += 1
-        except Exception as e:
-            print(e)
-    save_already_download('mziList.bin', url + '\n')
+        #try:
+        link = '{}/{}'.format(url, i + 1)
+        s = lxml.etree.HTML(requests.get(link).content)
+        jpgLink = s.xpath('//div[@class="main-image"]/p/a/img/@src')[0]
+        filename = title + '_' + str(n) + '.jpg'
+        file_path = dir_path[1] +  filename
+        if os.path.isfile(file_path):
+            color_print('*: 图片 {} 已经存在，已跳过'.format(filename),FOREGROUND_YELLOW)
+        else:
+            color_print('*: 图片 {}_{} 保存成功' .format(title, n),FOREGROUND_GREEN)
+            with open(file_path, "wb+") as jpg:
+                jpg.write(requests.get(jpgLink, headers=header(jpgLink)).content)
+        n += 1
+        #except Exception as e:
+         #   print(e)
+    print ('!: 图集【{}】保存成功'.format(title))
+    save_already_download(dir_path[1]+download_Log[1], url)
 
 
-def get_url(num):  # 得到优美图库的详情页序列
+def get_umei(num):  # 得到优美图库的详情页序列
     tag = 'yongzhuang'
     url = 'http://www.umei.cc'  # 需要设置首页地址
     page_index = url + '/tags/' + tag + '_' + str(num) + '.htm'
@@ -181,7 +183,7 @@ def get_url(num):  # 得到优美图库的详情页序列
     return suolue_url
 
 
-def get_page(pageNum):  # 获取妹子图主页列表
+def get_mzi(pageNum):  # 获取妹子图主页列表
     baseUrl = 'http://www.mzitu.com/page/{}'.format(pageNum)
     selector = lxml.etree.HTML(requests.get(baseUrl).content)
     urls = []
@@ -189,11 +191,18 @@ def get_page(pageNum):  # 获取妹子图主页列表
         urls.append(i)
     return urls
 
+def get_page(source,page):
+    if source == 1:
+        return get_mzi(page)
+    else:
+        return get_umei(page)
 
 def get_usr_define():
     password_list = ['000', '001', '010', '011', '100','101','110','111']
-
-    img_org_list = [False, True]
+    img_org_text = ['[普通妹子]','[精选妹子]']
+    download_speed_text = ['[龟速下载]','[急速下载]']
+    download_page_text  = ['[只有一页]','[没有限制]']
+    img_org_list = [0, 1]
     download_speed_list = [1, 10]
     download_page_list = [2, 40]
 
@@ -201,9 +210,9 @@ def get_usr_define():
     print('=                     人工智障爬虫                    =')
     print('=======================================================')
     print('*: 输入指令码以开启对应功能',end='\n\n')
-    print('其功能区分如下表所示:',end='\n\n')
+    print('*: 其功能区分如下表所示:',end='\n\n')
 
-    color_print('| 【////\\\\\\\\】\t【0】\t【1】 |\t\n'
+    color_print('| 【////\\\\\\\\】\t【0】             【1】   |\t\n'
           '| 【图 片 源】\t[普通妹子]\t[精选妹子]|\t\n'
           '| 【下载速度】\t[龟速下载]\t[急速下载]| \t\n'
           '| 【下载数量】\t[只有一页]\t[没有限制]| \t\n',FOREGROUND_BLUE)
@@ -216,68 +225,60 @@ def get_usr_define():
         color_print('!: 未输入正确指令码，将以默认值 000 运行!',FOREGROUND_RED)
         usr_id = 0
         time.sleep(1)
-
-    else:
-        color_print('!: 图片将保存在{},请尽情欣赏！'.format(dir_path),FOREGROUND_RED)
-        color_print ('!: 请勿删除图片文件夹中的.bin文件,缺少此文件将引起断点续传功能的错误!',FOREGROUND_RED)
-
     fun_code = password_list[usr_id]
-    if fun_code[1] == '1':
-        color_print('!: 为您开启急速下载中...',FOREGROUND_GREEN)
-    else:
-        color_print('!: 您将使用单线程下载，速度较慢！',FOREGROUND_RED)
     img_org = img_org_list[int(fun_code[0])]
     download_speed = download_speed_list[int(fun_code[1])]
     download_page = download_page_list[int(fun_code[2])]
+    color_print('!: 正为您开启 {}  {}  {} 功能...'.format(img_org_text[img_org],download_speed_text[int(fun_code[1])],download_page_text[int(fun_code[2])]), FOREGROUND_BLUE)
     return img_org, download_speed, download_page
 
 def save_already_download(file_name, contents):
-    fh = open(dir_path+file_name, 'a+')
-    fh.write(contents)
+    fh = open(file_name, 'ab+')
+    fh.write(base64.b64encode(contents.encode("utf-8")))
+    fh.write('\n'.encode('utf-8'))
     fh.close()
 
 if __name__ == '__main__':
-    dir_path = 'D:/newImg/'
+    dir_path = ['D:/MyImgNew/umei/','D:/MyImgNew/mzi/']
+    download_Log = ['umeiLog.bin','mziLog.bin']
     downloaded_List = []   #已下载列表
-    if (not os.path.exists(dir_path)):
-        os.makedirs(dir_path)
+    all_url = []
+    img_org, download_speed, download_page = get_usr_define()  # 获得用户权限
+    if (not os.path.exists(dir_path[img_org])):
+        os.makedirs(dir_path[img_org])
     else:
         pass
-    mul_url = []
-    img_org, download_speed, download_page = get_usr_define()  # 获得用户权限
+    color_print('!: 图片将保存在{},请尽情欣赏！'.format(dir_path[img_org]), FOREGROUND_RED)
+    time.sleep(3)
+    color_print('!: 请勿删除图片文件夹中的.bin文件,缺少此文件将引起断点续传功能的错误!', FOREGROUND_RED)
     print('!: 初始化页面资源中...')
-    lastPro = 0
-    if (img_org == True):  #精选
-        for i in range(1, download_page):
-            print('!: 已加载 {}%   '.format(round(i/download_page*100)),end='')
-            for proindex in range(0, round(i / download_page * 20)):
-                print('■', end='')
+    for i in range(0, download_page):
+        print('!: 已加载 {}%   '.format(round((i+1) / download_page * 100)), end='')
+        for proindex in range(0, round(i / download_page * 20)):
+            print('■', end='')
+        if i<download_page -1:
             print('', end='\r')
-            mul_url.extend(get_page(i))
-            if os.path.isfile(dir_path + 'mziList.bin'):
-                with open(dir_path + 'mziList.bin', 'r') as umeiList:
-                    for line in umeiList.readlines():
-                        downloaded_List.append(line.strip('\n'))
-        download_List=list(set(mul_url)^set(downloaded_List))   #得到下载目录
-        skip_mum = len(list(set(mul_url).union(set(downloaded_List))))-len(download_List)
-        color_print('\n!: 已为您跳过已下载的{}个图集!'.format(skip_mum),FOREGROUND_RED)
+        else:
+            print('',end='\n')
+        all_url.extend(get_page(img_org, i))
+    if all_url == []:
+        color_print('!: 连接错误！请检查网络或重新启动！', FOREGROUND_RED)
+        sys.exit(0)
+
+    if os.path.isfile(dir_path[img_org] + download_Log[img_org]):
+        print('')
+        with open(dir_path[img_org] + download_Log[img_org], 'rb') as umeiList:
+            for base64line in umeiList.readlines():
+                line = str(base64.b64decode(base64line).decode('utf-8'))
+                downloaded_List.append(line)
+        umeiList.close()
+    download_List=list(set(all_url) ^ set(downloaded_List))   #得到下载目录
+    skip_mum = len(list(set(all_url).union(set(downloaded_List)))) - len(download_List)
+    color_print('!: 已为您跳过已下载的{}个图集!'.format(skip_mum),FOREGROUND_RED)
+    if img_org == 1:  #如果是妹子图源
         with ThreadPool(download_speed) as pool:
             pool.map(downloadMzitu, download_List)
     else:
-
-        for i in range(1, download_page):
-            print('!: 已加载 {}%   '.format(round(i / download_page * 100)), end='')
-            for proindex in range(0, round(i / download_page * 20)):
-                print('■', end='')
-            print('', end='\r')
-            mul_url.extend(get_url(i))
-        if os.path.isfile(dir_path + 'umeiList.bin'):
-            with open(dir_path + 'umeiList.bin', 'r') as umeiList:
-                for line in umeiList.readlines():
-                    downloaded_List.append(line.strip('\n'))
-        download_List=list(set(mul_url)^set(downloaded_List))   #得到下载目录
-        skip_mum = len(list(set(mul_url).union(set(downloaded_List)))) - len(download_List)
-        color_print('\n!: 已为您跳过已下载的{}个图集!'.format(skip_mum),FOREGROUND_RED)
         with ThreadPool(download_speed) as pool:
             pool.map(downloadUmei, download_List)
     color_print('恭喜！所有页面均已爬完~',FOREGROUND_GREEN)
